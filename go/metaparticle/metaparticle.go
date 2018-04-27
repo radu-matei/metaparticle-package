@@ -45,6 +45,8 @@ type Package struct {
 	Builder string
 	// Whether to publish the built image to the remote repository
 	Publish bool
+	// If present, use the Dockerfile provided by user
+	Dockerfile string
 }
 
 // Executor implementors are container platforms where the containers can be deployed (e.g. Azure, GCP)
@@ -101,7 +103,11 @@ func builderFromPackage(pkg *Package) (Builder, error) {
 	}
 }
 
-func writeDockerfile(name string) error {
+func writeDockerfile(pkg *Package) error {
+	if pkg.Dockerfile != "" {
+		return nil
+	}
+
 	contents := `FROM golang:1.9 as builder
 WORKDIR /go/src/app
 COPY . .
@@ -145,7 +151,8 @@ func Containerize(r *Runtime, p *Package, f func()) {
 		if len(p.Repository) != 0 {
 			image = p.Repository + "/" + image
 		}
-		err = writeDockerfile("metaparticle-package")
+
+		err = writeDockerfile(p)
 		if err != nil {
 			panic(fmt.Sprintf("Could not write Dockerfile: %v", err))
 		}
